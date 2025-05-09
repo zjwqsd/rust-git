@@ -21,8 +21,14 @@ pub fn clean_working_directory() -> std::io::Result<()> {
 }
 pub fn create_tree(entries: &[(String, String)], repo_path: &Path) -> io::Result<String> {
     let mut content = String::new();
+
     for (hash, path) in entries {
-        content.push_str(&format!("blob {} {}\n", hash, path));
+        let file_path = Path::new(path);
+        if file_path.exists() {
+            content.push_str(&format!("blob {} {}\n", hash, path));
+        } else {
+            println!("⚠️  跳过不存在的文件 {}", path);
+        }
     }
 
     let tree_hash = sha1_hash(content.as_bytes());
@@ -30,6 +36,8 @@ pub fn create_tree(entries: &[(String, String)], repo_path: &Path) -> io::Result
     let obj_dir = repo_path.join("objects").join(dir);
     fs::create_dir_all(&obj_dir)?;
     let tree_path = obj_dir.join(file);
+    println!("🌲 最终写入 tree 对象内容：");
+    println!("{}", content);
     fs::write(tree_path, content)?;
 
     Ok(tree_hash)

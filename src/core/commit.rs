@@ -6,6 +6,10 @@ use crate::utils::hash::sha1_hash;
 
 pub fn create_commit(message: &str, repo_path: &Path) -> io::Result<String> {
     let entries = read_index(&repo_path.join("index"))?;
+    println!("📦 准备生成 tree，当前 index 中的条目:");
+    for (hash, path) in &entries {
+        println!("    {} {}", hash, path);
+    }
     let tree_hash = create_tree(&entries, repo_path)?;
 
     // let head_ref = repo_path.join("refs/heads/main");

@@ -5,7 +5,14 @@ use crate::core::blob::write_blob;
 /// 添加单个文件
 fn add_file_to_index(file_path: &Path, index_file: &mut fs::File) -> io::Result<()> {
     let hash = write_blob(file_path)?;
-    writeln!(index_file, "{} {}", hash, file_path.display())?;
+
+    // ✅ 写入相对路径
+    let cwd = std::env::current_dir().unwrap_or(PathBuf::from(""));
+    let abs = fs::canonicalize(file_path)?;
+    let rel_path = abs.strip_prefix(&cwd).unwrap_or(&abs);
+    let clean_path = rel_path.to_string_lossy();
+
+    writeln!(index_file, "{} {}", hash, clean_path)?;
     Ok(())
 }
 
@@ -62,17 +69,38 @@ fn visit_dir_recursively(dir: &Path, index_file: &mut fs::File, current_exe: &Op
     Ok(())
 }
 
+// pub fn read_index(index_path: &Path) -> io::Result<Vec<(String, String)>> {
+//     let content = fs::read_to_string(index_path)?;
+//     let mut result = Vec::new();
+//     for line in content.lines() {
+//         if let Some((hash, path)) = line.split_once(' ') {
+//             result.push((hash.to_string(), path.to_string()));
+//         }
+//     }
+//     Ok(result)
+// }
 pub fn read_index(index_path: &Path) -> io::Result<Vec<(String, String)>> {
     let content = fs::read_to_string(index_path)?;
-    let mut result = Vec::new();
+    let mut entries = Vec::new();
+
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(""));
+
     for line in content.lines() {
         if let Some((hash, path)) = line.split_once(' ') {
-            result.push((hash.to_string(), path.to_string()));
+            let clean_path = Path::new(path)
+                .strip_prefix(&cwd)
+                .unwrap_or(Path::new(path))
+                .to_string_lossy()
+                .to_string();
+
+            entries.push((hash.to_string(), clean_path));
         }
     }
-    Ok(result)
+    for (hash, path) in &entries {
+        println!("📥 index 读取: {} -> {}", hash, path);
+    }
+    Ok(entries)
 }
-
 /// 从 index 中删除某个文件条目，并返回其 hash（用于删除对象）
 pub fn remove_from_index(path: &Path) -> io::Result<Option<String>> {
     let index_path = Path::new(".mygit/index");
@@ -80,21 +108,40 @@ pub fn remove_from_index(path: &Path) -> io::Result<Option<String>> {
         return Ok(None);
     }
 
-    let content = fs::read_to_string(&index_path)?;
+    let content = fs::read_to_string(index_path)?;
     let mut new_lines = Vec::new();
     let mut removed_hash = None;
 
+    // 👇 计算 path 的规范相对路径
+    let cwd = std::env::current_dir()?;
+    let abs_path = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let rel_path = abs_path.strip_prefix(&cwd).unwrap_or(&abs_path);
+    let rel_path_str = rel_path.to_string_lossy();
+
     for line in content.lines() {
-        if let Some((hash, file)) = line.split_once(' ') {
-            if file == path.to_string_lossy() {
+        if let Some((hash, entry_path)) = line.split_once(' ') {
+            if entry_path == rel_path_str {
                 removed_hash = Some(hash.to_string());
-                continue; // 跳过该行
+                println!("✅ 从 index 中移除: {}", entry_path);
+                continue;
             }
         }
         new_lines.push(line.to_string());
     }
 
-    // 覆盖 index 文件
     fs::write(index_path, new_lines.join("\n"))?;
+
+    if removed_hash.is_none() {
+        println!("⚠️ 无法匹配 index 路径: {}", rel_path_str);
+    }else {
+        println!("⚠️ 未从 index 中移除: {}", rel_path_str);
+    }
+
     Ok(removed_hash)
 }
+
+// if removed.is_some() {
+// println!("✅ 从 index 中移除: {}", rel_path);
+// } else {
+// println!("⚠️ 未从 index 中移除: {}", rel_path);
+// }
