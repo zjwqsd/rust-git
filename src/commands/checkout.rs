@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::Path;
-use crate::core::reference::{set_head, get_head_ref};
+use crate::core::reference::{set_head};
 use crate::core::commit::read_commit_tree;
 use crate::core::tree::{restore_tree, clean_working_directory};
 
@@ -14,22 +14,19 @@ pub fn git_checkout(branch: &str, create: bool) {
             return;
         }
 
-        // 获取当前 HEAD 指向的提交（如果存在）
-        let head_ref_path = match get_head_ref(repo_path) {
-            Ok(p) => p,
-            Err(_) => {
-                eprintln!("HEAD 无效，无法创建分支");
-                return;
-            }
-        };
+        // ✅ 正确读取当前 HEAD 的 commit（无论是否为 symbolic ref）
+        let head_path = repo_path.join("HEAD");
+        let head_content = fs::read_to_string(&head_path).unwrap_or_default().trim().to_string();
+        println!("🧭 当前 HEAD 内容: {}", head_content);
 
-        let commit_hash = if head_ref_path.exists() {
-            fs::read_to_string(&head_ref_path)
-                .unwrap_or_default()
-                .trim()
-                .to_string()
+        let commit_hash = if head_content.starts_with("ref: ") {
+            // symbolic ref
+            let head_ref_path = repo_path.join(head_content.trim_start_matches("ref: ").trim());
+            fs::read_to_string(head_ref_path).unwrap_or_default().trim().to_string()
         } else {
-            String::new() // 无提交，允许空分支
+            // detached HEAD
+            println!("🧷 HEAD 为 detached，commit hash: {}", head_content);
+            head_content
         };
 
         fs::write(&ref_path, format!("{}\n", commit_hash)).unwrap();
@@ -47,13 +44,13 @@ pub fn git_checkout(branch: &str, create: bool) {
         return;
     }
 
-    // ✅ 清理当前工作区
+    // 清理工作区
     if let Err(e) = clean_working_directory() {
         eprintln!("清理工作区失败: {}", e);
         return;
     }
 
-    // 恢复提交（如果该分支有提交）
+    // 读取新分支的提交并恢复
     let commit_hash = fs::read_to_string(&ref_path)
         .unwrap_or_default()
         .trim()

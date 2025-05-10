@@ -2,7 +2,7 @@
 
 use assert_cmd::Command;
 use tempfile::tempdir;
-use std::fs;
+// use std::fs;
 
 fn bin() -> Command {
     Command::cargo_bin("rust-git").expect("binary build failed")

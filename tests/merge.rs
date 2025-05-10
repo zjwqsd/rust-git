@@ -15,8 +15,11 @@ fn init_commit(repo: &std::path::Path, name: &str, content: &str) {
     fs::write(&path, content).unwrap();
     assert!(path.exists(), "❗写入失败：{}", name);
 
-    bin().args(["add", name]).current_dir(repo).assert().success();
-    bin().args(["commit", "-m", "msg"]).current_dir(repo).assert().success();
+    run_and_log(&["add", name], repo);
+    let out = run_and_log(&["commit", "-m", "msg"], repo);
+
+    // ✅ 附加验证：commit 输出中包含写入哪一个分支
+    println!("🧾 commit 输出:\n{}", out);
 }
 
 
@@ -166,31 +169,47 @@ fn test_merge_add_and_delete_different_files() {
     // 提交 base.txt 和 common.txt
     init_commit(repo, "base.txt", "base");
     init_commit(repo, "common.txt", "common");
+
+    // 查看当前状态是否有 common.txt
+    println!("🧪 提交 common.txt 后的状态:");
     run_and_log(&["status"], repo);
 
     // 创建 a 分支并提交 a.txt
     run_and_log(&["checkout", "-b", "a"], repo);
     init_commit(repo, "a.txt", "a");
 
+    println!("🧪 a 分支提交后状态:");
+    run_and_log(&["status"], repo);
+
     // 回到 main 创建 b 分支
     run_and_log(&["checkout", "main"], repo);
-    run_and_log(&["status"], repo); // common.txt 应该还在
+    println!("🧪 切换回 main 后状态:");
+    run_and_log(&["status"], repo);
 
     run_and_log(&["checkout", "-b", "b"], repo);
-    run_and_log(&["status"], repo); // 关键位置：查看 common.txt 是否还在
+    println!("🧪 b 分支创建后状态:");
+    run_and_log(&["status"], repo);
 
     // 断言 common.txt 是否存在
     let common_path = repo.join("common.txt");
-    assert!(common_path.exists(), "❗ common.txt 丢失，说明分支切换后未还原工作区");
+    assert!(
+        common_path.exists(),
+        "❗ common.txt 丢失，说明分支切换后未还原工作区"
+    );
 
     // 删除 common.txt 并提交
     fs::remove_file(&common_path).unwrap();
     run_and_log(&["rm", "common.txt"], repo);
     run_and_log(&["commit", "-m", "b delete common"], repo);
 
+    println!("🧪 b 分支删除 common.txt 后状态:");
+    run_and_log(&["status"], repo);
+
     // 合并回 a 分支
     run_and_log(&["checkout", "a"], repo);
+    println!("🧪 切换回 a 前合并状态:");
+    run_and_log(&["status"], repo);
+
     let out = run_and_log(&["merge", "b"], repo);
     assert!(out.contains("已合并"));
 }
-

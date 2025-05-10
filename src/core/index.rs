@@ -1,57 +1,53 @@
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-
+use std::collections::BTreeMap;
 use crate::core::blob::write_blob;
 
 /// 将路径标准化为统一格式（相对路径 + / 分隔符）
+/// 将路径标准化为统一格式（相对路径 + / 分隔符）
 pub fn normalize_path(path: &Path) -> io::Result<String> {
     let cwd = std::env::current_dir()?;
-    let abs = cwd.join(path); // ✅ 直接拼接，不调用 fs::canonicalize
-    let rel = abs.strip_prefix(&cwd).unwrap_or(&abs);
+    let abs = cwd.join(path); // 绝对路径
+    let rel = abs.strip_prefix(&cwd).unwrap_or(&abs); // 相对路径
     Ok(rel.to_string_lossy().replace('\\', "/"))
 }
 
-/// 添加单个文件
-fn add_file_to_index(file_path: &Path, index_file: &mut fs::File) -> io::Result<()> {
-    let hash = write_blob(file_path)?;
-    let clean_path = normalize_path(file_path)?;
+/// 读取 index 内容为 map（path -> hash）
+fn load_index(index_path: &Path) -> BTreeMap<String, String> {
+    let mut map = BTreeMap::new();
 
-    println!("📌 add_file_to_index: {} -> {}", file_path.display(), clean_path);
-    writeln!(index_file, "{} {}", hash, clean_path)?;
-    Ok(())
-}
-
-/// 公开接口：添加路径（文件或目录）到 index
-pub fn add_to_index(path: &Path) -> io::Result<()> {
-    let index_path = Path::new(".mygit").join("index");
-    let mut index_file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(index_path)?;
-
-    let current_exe = std::env::current_exe().ok();
-
-    if path.is_file() {
-        if let Some(ref exe) = current_exe {
-            if path == exe {
-                return Ok(()); // 跳过可执行文件
+    if let Ok(content) = fs::read_to_string(index_path) {
+        for line in content.lines() {
+            if let Some((hash, path)) = line.trim().split_once(' ') {
+                map.insert(path.to_string(), hash.to_string());
             }
         }
-        // ✅ 清理已有条目，避免重复
-        remove_from_index(path).ok();
-        add_file_to_index(path, &mut index_file)?;
-    } else if path.is_dir() {
-        visit_dir_recursively(path, &mut index_file, &current_exe)?;
-    } else {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "路径不存在"));
     }
 
+    map
+}
+
+/// 保存 index（path -> hash）为 index 文件
+fn save_index(index_path: &Path, map: &BTreeMap<String, String>) -> io::Result<()> {
+    let mut file = File::create(index_path)?;
+    for (path, hash) in map {
+        writeln!(file, "{} {}", hash, path)?;
+    }
     Ok(())
 }
 
-/// 遍历目录所有文件，递归实现
-fn visit_dir_recursively(dir: &Path, index_file: &mut fs::File, current_exe: &Option<PathBuf>) -> io::Result<()> {
+/// 添加单个文件（更新 blob、替换 index 条目）
+fn add_single_file(path: &Path, index: &mut BTreeMap<String, String>) -> io::Result<()> {
+    let hash = write_blob(path)?;
+    let rel_path = normalize_path(path)?;
+    index.insert(rel_path.clone(), hash.clone());
+    println!("✅ 添加到 index: {} -> {}", rel_path, hash);
+    Ok(())
+}
+
+/// 遍历目录递归添加
+fn add_dir_recursive(dir: &Path, index: &mut BTreeMap<String, String>, exe: &Option<PathBuf>) -> io::Result<()> {
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -60,20 +56,76 @@ fn visit_dir_recursively(dir: &Path, index_file: &mut fs::File, current_exe: &Op
             continue;
         }
 
-        if let Some(ref exe) = current_exe {
-            if &path == exe {
+        if let Some(ref exe_path) = exe {
+            if &path == exe_path {
                 continue;
             }
         }
 
         if path.is_file() {
-            add_file_to_index(&path, index_file)?;
+            add_single_file(&path, index)?;
         } else if path.is_dir() {
-            visit_dir_recursively(&path, index_file, current_exe)?;
+            add_dir_recursive(&path, index, exe)?;
         }
     }
     Ok(())
 }
+
+// 添加单个文件
+// fn add_file_to_index(file_path: &Path, index_file: &mut fs::File) -> io::Result<()> {
+//     let hash = write_blob(file_path)?;
+//     let clean_path = normalize_path(file_path)?;
+//
+//     println!("📌 add_file_to_index: {} -> {}", file_path.display(), clean_path);
+//     writeln!(index_file, "{} {}", hash, clean_path)?;
+//     Ok(())
+// }
+// 公共接口：添加路径（文件或目录）到 index
+pub fn add_to_index(path: &Path) -> io::Result<()> {
+    let index_path = Path::new(".mygit").join("index");
+    let mut index = load_index(&index_path);
+
+    let exe = std::env::current_exe().ok();
+
+    if path.is_file() {
+        if let Some(ref exe_path) = exe {
+            if path == exe_path {
+                return Ok(()); // 跳过可执行文件
+            }
+        }
+        add_single_file(path, &mut index)?;
+    } else if path.is_dir() {
+        add_dir_recursive(path, &mut index, &exe)?;
+    } else {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "路径不存在"));
+    }
+
+    save_index(&index_path, &index)
+}
+/// 遍历目录所有文件，递归实现
+// fn visit_dir_recursively(dir: &Path, index_file: &mut fs::File, current_exe: &Option<PathBuf>) -> io::Result<()> {
+//     for entry in fs::read_dir(dir)? {
+//         let entry = entry?;
+//         let path = entry.path();
+//
+//         if path.is_dir() && path.file_name().map_or(false, |n| n == ".mygit") {
+//             continue;
+//         }
+//
+//         if let Some(ref exe) = current_exe {
+//             if &path == exe {
+//                 continue;
+//             }
+//         }
+//
+//         if path.is_file() {
+//             add_file_to_index(&path, index_file)?;
+//         } else if path.is_dir() {
+//             visit_dir_recursively(&path, index_file, current_exe)?;
+//         }
+//     }
+//     Ok(())
+// }
 
 /// 读取 index 内容
 pub fn read_index(index_path: &Path) -> io::Result<Vec<(String, String)>> {

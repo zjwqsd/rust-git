@@ -1,7 +1,7 @@
 use std::fs::{self};
 use std::io::{self};
 use std::path::{Path};
-use crate::core::{index::read_index, tree::create_tree,reference::get_head_ref};
+use crate::core::{index::read_index, tree::create_tree};
 use crate::utils::hash::sha1_hash;
 use std::collections::HashSet;
 pub fn create_commit(message: &str, repo_path: &Path) -> io::Result<String> {
@@ -10,24 +10,35 @@ pub fn create_commit(message: &str, repo_path: &Path) -> io::Result<String> {
     for (hash, path) in &entries {
         println!("    {} {}", hash, path);
     }
+
     let tree_hash = create_tree(&entries, repo_path)?;
 
-    // let head_ref = repo_path.join("refs/heads/main");
-    let head_ref_path = get_head_ref(repo_path)?;
-
-    let parent = if head_ref_path.exists() {
-        Some(fs::read_to_string(&head_ref_path)?.trim().to_string())
+    // 获取 HEAD 内容（可能是 symbolic ref，也可能是 commit hash）
+    let head_path = repo_path.join("HEAD");
+    let head_content = fs::read_to_string(&head_path)?.trim().to_string();
+    println!("📌 当前 HEAD 内容: {}", head_content);
+    // 获取 parent commit（如果存在）
+    let parent = if head_content.starts_with("ref: ") {
+        let ref_path = repo_path.join(head_content.trim_start_matches("ref: ").trim());
+        if ref_path.exists() {
+            Some(fs::read_to_string(&ref_path)?.trim().to_string())
+        } else {
+            None
+        }
     } else {
-        None
+        // detached HEAD 情况
+        if !head_content.is_empty() {
+            Some(head_content.clone())
+        } else {
+            None
+        }
     };
-
 
     let author = "Your Name <you@example.com>";
     let content = format!(
-        "tree {}\n{}{}\nauthor {}\ncommitter {}\n\n{}",
+        "tree {}\n{}author {}\ncommitter {}\n\n{}",
         tree_hash,
         if let Some(p) = &parent { format!("parent {}\n", p) } else { "".into() },
-        "",
         author,
         author,
         message
@@ -39,12 +50,17 @@ pub fn create_commit(message: &str, repo_path: &Path) -> io::Result<String> {
     fs::create_dir_all(&obj_dir)?;
     let path = obj_dir.join(file);
     fs::write(path, content)?;
-    println!("🔗 更新分支 {} -> {}", head_ref_path.display(), hash);
-    // 更新 HEAD 指针
-    // fs::write(head_ref, format!("{}\n", hash))?;
-    fs::write(&head_ref_path, format!("{}\n", hash))?;
-    // 清空 index
-    // fs::write(repo_path.join("index"), "")?;
+
+    // 更新 HEAD 或分支引用
+    if head_content.starts_with("ref: ") {
+        let ref_path = repo_path.join(head_content.trim_start_matches("ref: ").trim());
+        println!("🔗 更新分支 {} -> {}", ref_path.display(), hash);
+        fs::write(ref_path, format!("{}\n", hash))?;
+    } else {
+        // detached HEAD
+        println!("🔗 更新 HEAD -> {}", hash);
+        fs::write(head_path, format!("{}\n", hash))?;
+    }
 
     Ok(hash)
 }
