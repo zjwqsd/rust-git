@@ -23,12 +23,12 @@ pub fn write_blob(path: &Path) -> io::Result<String> {
 }
 
 
-/// 删除指定哈希的 blob 对象（简化逻辑）
-pub fn remove_blob(hash: &str) -> io::Result<()> {
-    let (dir, file) = hash.split_at(2);
-    let blob_path = Path::new(".mygit/objects").join(dir).join(file);
-    if blob_path.exists() {
-        fs::remove_file(blob_path)?;
-    }
-    Ok(())
-}
+// 删除指定哈希的 blob 对象（简化逻辑）
+// pub fn remove_blob(hash: &str) -> io::Result<()> {
+//     let (dir, file) = hash.split_at(2);
+//     let blob_path = Path::new(".mygit/objects").join(dir).join(file);
+//     if blob_path.exists() {
+//         fs::remove_file(blob_path)?;
+//     }
+//     Ok(())
+// }

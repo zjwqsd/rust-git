@@ -104,6 +104,19 @@ pub fn git_merge(target_branch: &str) {
 
     // 合并 tree 并写入
     let merged_tree = merge_tree_simple(&current_tree, &target_tree);
+    println!("🔎 合并 tree 内容:");
+    for (path, hash) in &merged_tree {
+        println!("  {} -> {}", path, hash);
+
+        let (dir, file) = hash.split_at(2);
+        let blob_path = repo_path.join("objects").join(dir).join(file);
+        if let Ok(blob) = fs::read_to_string(&blob_path) {
+            println!("    内容: {:?}", blob);
+        } else {
+            println!("    ⚠ 无法读取 blob {}", hash);
+        }
+    }
+
     let new_tree_hash = write_tree_from_map(&merged_tree, repo_path).unwrap();
 
     // 创建合并提交

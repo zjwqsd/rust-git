@@ -91,38 +91,38 @@ pub fn create_merge_commit(
 
     Ok(hash)
 }
-/// 判断 base_commit 是否为 target_commit 的祖先（仅查一层 parent）
-pub fn is_ancestor_commit(base: &str, target: &str, repo_path: &Path) -> bool {
-    if base.len() < 2 || target.len() < 2 {
-        eprintln!("提交哈希无效：base={}, target={}", base, target);
-        return false;
-    }
-
-    let mut current = Some(target.to_string());
-
-    while let Some(hash) = current {
-        if hash == base {
-            return true;
-        }
-
-        if hash.len() < 2 {
-            break;
-        }
-
-        let (dir, file) = hash.split_at(2);
-        let path = repo_path.join("objects").join(dir).join(file);
-        let content = fs::read_to_string(path).unwrap_or_default();
-
-        current = None;
-        for line in content.lines() {
-            if line.starts_with("parent ") {
-                let parent_hash = line[7..].trim();
-                current = Some(parent_hash.to_string());
-                break;
-            }
-        }
-    }
-
-    false
-}
+// 判断 base_commit 是否为 target_commit 的祖先（仅查一层 parent）
+// pub fn is_ancestor_commit(base: &str, target: &str, repo_path: &Path) -> bool {
+//     if base.len() < 2 || target.len() < 2 {
+//         eprintln!("提交哈希无效：base={}, target={}", base, target);
+//         return false;
+//     }
+//
+//     let mut current = Some(target.to_string());
+//
+//     while let Some(hash) = current {
+//         if hash == base {
+//             return true;
+//         }
+//
+//         if hash.len() < 2 {
+//             break;
+//         }
+//
+//         let (dir, file) = hash.split_at(2);
+//         let path = repo_path.join("objects").join(dir).join(file);
+//         let content = fs::read_to_string(path).unwrap_or_default();
+//
+//         current = None;
+//         for line in content.lines() {
+//             if line.starts_with("parent ") {
+//                 let parent_hash = line[7..].trim();
+//                 current = Some(parent_hash.to_string());
+//                 break;
+//             }
+//         }
+//     }
+//
+//     false
+// }
 

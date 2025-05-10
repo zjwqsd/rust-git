@@ -8,6 +8,9 @@ clap = { version = "4.0.32", features = ["derive"] }
 sha1 = "0.10"
 
 [dev-dependencies]
+assert_cmd = "2"
+tempfile = "3"
+predicates = "3"
 
 [[bin]]
 name = "rust-git"

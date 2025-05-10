@@ -38,6 +38,8 @@ pub fn add_to_index(path: &Path) -> io::Result<()> {
                 return Ok(()); // 跳过可执行文件
             }
         }
+        // ✅ 清理已有条目，避免重复
+        remove_from_index(path).ok();
         add_file_to_index(path, &mut index_file)?;
     } else if path.is_dir() {
         visit_dir_recursively(path, &mut index_file, &current_exe)?;
