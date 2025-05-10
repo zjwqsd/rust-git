@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 use crate::core::reference::{set_head, get_head_ref};
 use crate::core::commit::read_commit_tree;
-use crate::core::tree::restore_tree;
+use crate::core::tree::{restore_tree, clean_working_directory};
 
 pub fn git_checkout(branch: &str, create: bool) {
     let repo_path = Path::new(".mygit");
@@ -47,14 +47,20 @@ pub fn git_checkout(branch: &str, create: bool) {
         return;
     }
 
-    // 恢复工作区（仅当该分支有提交时）
+    // ✅ 清理当前工作区
+    if let Err(e) = clean_working_directory() {
+        eprintln!("清理工作区失败: {}", e);
+        return;
+    }
+
+    // 恢复提交（如果该分支有提交）
     let commit_hash = fs::read_to_string(&ref_path)
         .unwrap_or_default()
         .trim()
         .to_string();
 
     if commit_hash.is_empty() {
-        println!("提示：当前分支尚无提交，工作区为空");
+        println!("提示：当前分支尚无提交，工作区为空（仅保留 .mygit）");
         return;
     }
 

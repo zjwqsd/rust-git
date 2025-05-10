@@ -3,7 +3,7 @@ use std::io::{self};
 use std::path::{Path};
 use crate::core::{index::read_index, tree::create_tree,reference::get_head_ref};
 use crate::utils::hash::sha1_hash;
-
+use std::collections::HashSet;
 pub fn create_commit(message: &str, repo_path: &Path) -> io::Result<String> {
     let entries = read_index(&repo_path.join("index"))?;
     println!("📦 准备生成 tree，当前 index 中的条目:");
@@ -91,38 +91,59 @@ pub fn create_merge_commit(
 
     Ok(hash)
 }
-// 判断 base_commit 是否为 target_commit 的祖先（仅查一层 parent）
-// pub fn is_ancestor_commit(base: &str, target: &str, repo_path: &Path) -> bool {
-//     if base.len() < 2 || target.len() < 2 {
-//         eprintln!("提交哈希无效：base={}, target={}", base, target);
-//         return false;
-//     }
-//
-//     let mut current = Some(target.to_string());
-//
-//     while let Some(hash) = current {
-//         if hash == base {
-//             return true;
-//         }
-//
-//         if hash.len() < 2 {
-//             break;
-//         }
-//
-//         let (dir, file) = hash.split_at(2);
-//         let path = repo_path.join("objects").join(dir).join(file);
-//         let content = fs::read_to_string(path).unwrap_or_default();
-//
-//         current = None;
-//         for line in content.lines() {
-//             if line.starts_with("parent ") {
-//                 let parent_hash = line[7..].trim();
-//                 current = Some(parent_hash.to_string());
-//                 break;
-//             }
-//         }
-//     }
-//
-//     false
-// }
+
+/// 向上追溯所有祖先
+fn collect_ancestors(mut commit: String, repo: &Path) -> HashSet<String> {
+    let mut ancestors = HashSet::new();
+
+    while commit.len() >= 2 {
+        ancestors.insert(commit.clone());
+
+        let (dir, file) = commit.split_at(2);
+        let path = repo.join("objects").join(dir).join(file);
+        if !path.exists() {
+            break;
+        }
+
+        let content = fs::read_to_string(&path).unwrap_or_default();
+        if let Some(parent_line) = content.lines().find(|line| line.starts_with("parent ")) {
+            commit = parent_line[7..].to_string(); // skip "parent "
+        } else {
+            break; // no parent = root
+        }
+    }
+
+    ancestors
+}
+
+/// 查找共同祖先（第一个相交的）
+pub fn find_common_ancestor(
+    current: &str,
+    target: &str,
+    repo: &Path,
+) -> Option<String> {
+    let current_ancestors = collect_ancestors(current.to_string(), repo);
+    let mut t = target.to_string();
+
+    while t.len() >= 2 {
+        if current_ancestors.contains(&t) {
+            return Some(t);
+        }
+
+        let (dir, file) = t.split_at(2);
+        let path = repo.join("objects").join(dir).join(file);
+        if !path.exists() {
+            break;
+        }
+
+        let content = fs::read_to_string(&path).unwrap_or_default();
+        if let Some(parent_line) = content.lines().find(|line| line.starts_with("parent ")) {
+            t = parent_line[7..].to_string();
+        } else {
+            break;
+        }
+    }
+
+    None
+}
 
