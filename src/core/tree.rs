@@ -1,24 +1,49 @@
 use std::fs::{self};
 use std::io::{self};
-use std::path::{Path};
+use std::path::{Path, PathBuf};
 use crate::utils::hash::sha1_hash;
 use std::collections::HashMap;
 
+
+/// 安全清理工作区，只保留 `.mygit` 和执行文件本体
 pub fn clean_working_directory() -> std::io::Result<()> {
+    let exe = std::env::current_exe().ok();
+    let mygit_path = fs::canonicalize(".mygit").unwrap_or_else(|_| PathBuf::from(".mygit"));
+
     for entry in fs::read_dir(".")? {
         let entry = entry?;
         let path = entry.path();
-        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-            if name == "rust-git" || name == ".mygit" {
-                continue; // 排除 rust-git 执行文件和 .mygit 目录
+        let canonical = fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
+
+        if canonical.starts_with(&mygit_path) {
+            println!("🔒 跳过 .mygit 内部文件或目录: {}", path.display());
+            continue;
+        }
+
+        if let Some(ref exe_path) = exe {
+            if &canonical == exe_path {
+                println!("🔒 跳过当前可执行文件: {}", path.display());
+                continue;
             }
         }
+        println!("检查路径: {}", path.display());
+        if path == Path::new(".mygit") {
+            println!("🚨 竟然试图删除 .mygit!!!");
+        }
         if path.is_file() {
+            println!("🧹 删除文件: {}", path.display());
             fs::remove_file(&path)?;
+        } else if path.is_dir() {
+            println!("🧹 删除目录: {}", path.display());
+            fs::remove_dir_all(&path)?;
         }
     }
     Ok(())
 }
+
+
+
+
 pub fn create_tree(entries: &[(String, String)], repo_path: &Path) -> io::Result<String> {
     let mut content = String::new();
 
@@ -101,21 +126,25 @@ pub fn merge_tree_simple(
     current: &HashMap<String, String>,
     target: &HashMap<String, String>,
 ) -> HashMap<String, String> {
-    let mut merged = current.clone();
+    let mut merged = HashMap::new();
 
-    for (k, v) in target {
-        match current.get(k) {
-            Some(existing) => {
-                if existing == v {
-                    merged.insert(k.clone(), v.clone()); // 相同内容可以合并
+    for (path, hash) in target {
+        match current.get(path) {
+            Some(cur_hash) => {
+                if cur_hash == hash {
+                    merged.insert(path.clone(), hash.clone()); // 内容一致，保留
+                } else {
+                    merged.insert(path.clone(), hash.clone()); // 内容不同但无冲突，按目标分支覆盖
                 }
-                // 否则冲突，跳过处理
             }
             None => {
-                merged.insert(k.clone(), v.clone()); // 新文件添加
+                merged.insert(path.clone(), hash.clone()); // 新文件
             }
         }
     }
+
+    // 🔥 特别注意：不要自动保留 current 中目标已删除的文件
+    // 即：如果 target 不包含某文件，则认为其被删除 → 不加入 merged
 
     merged
 }

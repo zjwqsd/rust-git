@@ -14,6 +14,7 @@ pub fn create_commit(message: &str, repo_path: &Path) -> io::Result<String> {
 
     // let head_ref = repo_path.join("refs/heads/main");
     let head_ref_path = get_head_ref(repo_path)?;
+
     let parent = if head_ref_path.exists() {
         Some(fs::read_to_string(&head_ref_path)?.trim().to_string())
     } else {
@@ -38,12 +39,12 @@ pub fn create_commit(message: &str, repo_path: &Path) -> io::Result<String> {
     fs::create_dir_all(&obj_dir)?;
     let path = obj_dir.join(file);
     fs::write(path, content)?;
-
+    println!("🔗 更新分支 {} -> {}", head_ref_path.display(), hash);
     // 更新 HEAD 指针
     // fs::write(head_ref, format!("{}\n", hash))?;
     fs::write(&head_ref_path, format!("{}\n", hash))?;
     // 清空 index
-    fs::write(repo_path.join("index"), "")?;
+    // fs::write(repo_path.join("index"), "")?;
 
     Ok(hash)
 }
