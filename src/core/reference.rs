@@ -30,3 +30,35 @@ pub fn get_current_branch_name(repo_path: &Path) -> Option<String> {
         None
     }
 }
+
+pub fn validate_branch_name(name: &str) -> Result<(), String> {
+    if name.is_empty() {
+        return Err("分支名不能为空".into());
+    }
+
+    if name == "." || name == ".." {
+        return Err("分支名不能为 '.' 或 '..'".into());
+    }
+
+    if name.starts_with('/') || name.ends_with('/') {
+        return Err("分支名不能以 '/' 开头或结尾".into());
+    }
+
+    if name.contains("//") {
+        return Err("分支名不能包含连续的 '/'".into());
+    }
+
+    if name.contains("..") {
+        return Err("分支名不能包含 '..'".into());
+    }
+
+    if name.contains(['~', '^', ':', '?', '*', '[', '\\', ' ']) {
+        return Err("分支名不能包含特殊字符：~, ^, :, ?, *, [, \\, 空格等".into());
+    }
+
+    if name.len() > 255 {
+        return Err("分支名太长".into());
+    }
+
+    Ok(())
+}

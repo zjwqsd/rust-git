@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 
 /// 安全清理工作区，只保留 `.mygit` 和执行文件本体
-pub fn clean_working_directory() -> std::io::Result<()> {
+pub fn clean_working_directory() -> io::Result<()> {
     let exe = std::env::current_exe().ok();
     let mygit_path = fs::canonicalize(".mygit").unwrap_or_else(|_| PathBuf::from(".mygit"));
 
@@ -94,7 +94,7 @@ pub fn restore_tree(tree_hash: &str, repo_path: &Path) -> io::Result<()> {
 }
 
 /// 返回 tree 中所有文件及其 blob 哈希
-pub fn read_tree_entries(tree_hash: &str, repo_path: &Path) -> std::io::Result<HashMap<String, String>> {
+pub fn read_tree_entries(tree_hash: &str, repo_path: &Path) -> io::Result<HashMap<String, String>> {
     let (dir, file) = tree_hash.split_at(2);
     let tree_path = repo_path.join("objects").join(dir).join(file);
     let content = fs::read_to_string(tree_path)?;
@@ -110,8 +110,8 @@ pub fn read_tree_entries(tree_hash: &str, repo_path: &Path) -> std::io::Result<H
     Ok(map)
 }
 
-/// 读取 blob 对象为 Vec<String>（按行）
-pub fn load_blob(hash: &str, repo_path: &Path) -> std::io::Result<Vec<String>> {
+
+pub fn load_blob(hash: &str, repo_path: &Path) -> io::Result<Vec<String>> {
     let (dir, file) = hash.split_at(2);
     let blob_path = repo_path.join("objects").join(dir).join(file);
     let content = fs::read_to_string(blob_path)?;
@@ -153,7 +153,7 @@ pub fn merge_tree_simple(
 pub fn write_tree_from_map(
     entries: &HashMap<String, String>,
     repo_path: &Path,
-) -> std::io::Result<String> {
+) -> io::Result<String> {
     use crate::utils::hash::sha1_hash;
 
     let mut content = String::new();

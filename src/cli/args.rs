@@ -45,6 +45,10 @@ pub enum Commands {
         branch: String,
     },
     Rm {
+        /// 是否递归删除目录
+        #[arg(short = 'r', long = "recursive")]
+        recursive: bool,
+
         file: String,
     },
     Status,
@@ -77,7 +81,7 @@ impl Cli {
                 crate::commands::checkout::git_checkout(branch, *create);
             }
             Commands::Merge { branch } => git_merge(branch),
-            Commands::Rm { file } => git_rm(file),
+            Commands::Rm { file, recursive } => git_rm(file, *recursive),
             Commands::Status => git_status(),
         }
     }

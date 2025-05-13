@@ -2,6 +2,7 @@ use std::fs;
 // use std::io::{self, Write};
 use std::io::{self};
 use std::path::Path;
+use crate::core::reference::validate_branch_name;
 
 use crate::core::reference::get_current_branch_name;
 pub fn git_branch(branch_name: Option<&str>) -> io::Result<()> {
@@ -9,6 +10,10 @@ pub fn git_branch(branch_name: Option<&str>) -> io::Result<()> {
     let heads_dir = repo_path.join("refs/heads");
 
     if let Some(name) = branch_name {
+        if let Err(reason) = validate_branch_name(name) {
+            eprintln!("❌ 无效的分支名 '{}': {}", name, reason);
+            std::process::exit(1); // 保证命令失败，测试可捕获
+        }
         // 创建分支
         let head_ref = repo_path.join("refs/heads/main");
         let current_commit = fs::read_to_string(&head_ref)?;

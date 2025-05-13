@@ -1,56 +1,95 @@
 use std::fs;
 use std::path::Path;
-use crate::core::reference::{set_head};
+use crate::core::reference::{set_head,validate_branch_name};
 use crate::core::commit::read_commit_tree;
 use crate::core::tree::{restore_tree, clean_working_directory};
 
-pub fn git_checkout(branch: &str, create: bool) {
-    let repo_path = Path::new(".mygit");
-    let ref_path = repo_path.join("refs/heads").join(branch);
+/// 判断是否是合法的 40 位 commit hash
+fn is_commit_hash(s: &str) -> bool {
+    s.len() == 40 && s.chars().all(|c| c.is_ascii_hexdigit())
+}
 
-    if create {
-        if ref_path.exists() {
-            eprintln!("分支 '{}' 已存在", branch);
+/// 检查分支名是否合法。如果非法，返回 `Err(原因)`，合法则返回 `Ok(())`
+
+
+/// 主函数：执行 checkout 逻辑
+pub fn git_checkout(target: &str, create: bool) {
+    let repo_path = Path::new(".mygit");
+
+    // 🚫 拒绝直接使用 "ref: refs/..." 形式
+    if target.starts_with("ref: ") {
+        eprintln!("❌ 错误：不允许直接使用 'ref: ...' 作为参数，请使用分支名或 commit hash");
+        return;
+    }
+
+    // 🆕 detached HEAD 模式
+    if !create && is_commit_hash(target) {
+        fs::write(repo_path.join("HEAD"), format!("{}\n", target)).unwrap();
+        println!("🔗 已切换到 commit {}（detached HEAD）", target);
+
+        if let Err(e) = clean_working_directory() {
+            eprintln!("清理工作区失败: {}", e);
             return;
         }
 
-        // ✅ 正确读取当前 HEAD 的 commit（无论是否为 symbolic ref）
-        let head_path = repo_path.join("HEAD");
-        let head_content = fs::read_to_string(&head_path).unwrap_or_default().trim().to_string();
-        println!("🧭 当前 HEAD 内容: {}", head_content);
+        if let Ok(tree_hash) = read_commit_tree(target, repo_path) {
+            if let Err(e) = restore_tree(&tree_hash, repo_path) {
+                eprintln!("恢复工作区失败: {}", e);
+            }
+        } else {
+            eprintln!("❌ 无法找到指定 commit 的 tree");
+        }
+
+        return;
+    }
+
+    // ✅ 校验分支名是否合法
+    if let Err(reason) = validate_branch_name(target) {
+        eprintln!("❌ 无效的分支名 '{}': {}", target, reason);
+        return;
+    }
+
+    let ref_path = repo_path.join("refs/heads").join(target);
+
+    if create {
+        if ref_path.exists() {
+            eprintln!("❌ 分支 '{}' 已存在", target);
+            return;
+        }
+
+        // 获取当前 HEAD 指向的 commit hash
+        let head_content = fs::read_to_string(repo_path.join("HEAD"))
+            .unwrap_or_default()
+            .trim()
+            .to_string();
 
         let commit_hash = if head_content.starts_with("ref: ") {
-            // symbolic ref
             let head_ref_path = repo_path.join(head_content.trim_start_matches("ref: ").trim());
             fs::read_to_string(head_ref_path).unwrap_or_default().trim().to_string()
         } else {
-            // detached HEAD
-            println!("🧷 HEAD 为 detached，commit hash: {}", head_content);
             head_content
         };
 
         fs::write(&ref_path, format!("{}\n", commit_hash)).unwrap();
-        println!("创建分支 '{}'", branch);
+        println!("✅ 创建分支 '{}'", target);
     }
 
+    // 分支切换
     if !ref_path.exists() {
-        eprintln!("分支 '{}' 不存在", branch);
+        eprintln!("❌ 分支 '{}' 不存在", target);
         return;
     }
 
-    // 设置 HEAD
-    if let Err(e) = set_head(&format!("refs/heads/{}", branch), repo_path) {
-        eprintln!("无法设置 HEAD: {}", e);
+    if let Err(e) = set_head(&format!("refs/heads/{}", target), repo_path) {
+        eprintln!("❌ 无法设置 HEAD: {}", e);
         return;
     }
 
-    // 清理工作区
     if let Err(e) = clean_working_directory() {
         eprintln!("清理工作区失败: {}", e);
         return;
     }
 
-    // 读取新分支的提交并恢复
     let commit_hash = fs::read_to_string(&ref_path)
         .unwrap_or_default()
         .trim()
@@ -66,11 +105,11 @@ pub fn git_checkout(branch: &str, create: bool) {
             if let Err(e) = restore_tree(&tree_hash, repo_path) {
                 eprintln!("恢复工作区失败: {}", e);
             } else {
-                println!("已切换到分支 '{}'", branch);
+                println!("✅ 已切换到分支 '{}'", target);
             }
         }
         Err(e) => {
-            eprintln!("无法读取提交 tree: {}", e);
+            eprintln!("❌ 无法读取提交 tree: {}", e);
         }
     }
 }

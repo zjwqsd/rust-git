@@ -195,3 +195,28 @@ pub fn remove_from_index(path: &Path) -> io::Result<Option<String>> {
 
     Ok(removed_hash)
 }
+
+pub fn remove_directory_entries_from_index(dir_path: &Path) {
+    let index_path = Path::new(".mygit").join("index");
+
+    if !index_path.exists() {
+        println!("⚠️ index 文件不存在");
+        return;
+    }
+
+    let content = fs::read_to_string(&index_path).unwrap_or_default();
+    let target_dir = normalize_path(dir_path).unwrap_or_default();
+
+    let mut new_lines = Vec::new();
+    for line in content.lines() {
+        if let Some((_, entry_path)) = line.split_once(' ') {
+            if !entry_path.starts_with(&target_dir) {
+                new_lines.push(line.to_string());
+            } else {
+                println!("🗑️ 从 index 移除目录项: {}", entry_path);
+            }
+        }
+    }
+
+    fs::write(&index_path, new_lines.join("\n")).unwrap();
+}

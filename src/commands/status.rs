@@ -6,13 +6,13 @@ use crate::utils::hash::sha1_hash;
 use crate::core::tree::read_tree_entries;
 
 /// 读取 HEAD 所在的 commit 的 tree（路径 -> blob hash 映射）
-fn read_head_tree_map(repo_path: &Path) -> std::io::Result<HashMap<String, String>> {
+fn read_head_tree_map(repo_path: &Path) -> io::Result<HashMap<String, String>> {
     let head_path = repo_path.join("HEAD");
     let head_content = fs::read_to_string(&head_path)?;
     let head_ref = head_content
         .trim()
         .strip_prefix("ref: ")
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "HEAD 格式错误"))?;
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "HEAD 格式错误"))?;
 
     let ref_path = repo_path.join(head_ref);
     if !ref_path.exists() {
@@ -32,7 +32,7 @@ fn read_head_tree_map(repo_path: &Path) -> std::io::Result<HashMap<String, Strin
         .lines()
         .find(|line| line.starts_with("tree "))
         .map(|line| line[5..].trim())
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "无法从 commit 中读取 tree"))?;
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "无法从 commit 中读取 tree"))?;
 
     read_tree_entries(tree_hash, repo_path)
 }
