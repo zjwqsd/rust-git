@@ -1,7 +1,7 @@
- #!/bin/bash
+#!/bin/bash
  # 当前目录位于 testcases
  # 创建一个空目录 test2
- mkdir test2
+mkdir test2
  # 拷贝 rust-git 到 test2 目录
 cp rust-git test2/
  # 进入 test2 目录
@@ -31,10 +31,10 @@ if [ "$(ls -A .mygit/objects)" ]; then
  exit 1
  fi
  # 验证 .mygit/refs/heads/main 文件是否存在且不为空
-if [ -s ".mygit/refs/heads/main" ]; then
- echo ".mygit/refs/heads/main exists and is not empty"
+if [ -s ".mygit/refs/heads/master" ]; then
+ echo ".mygit/refs/heads/master exists and is not empty"
  else
- echo ".mygit/refs/heads/main does not exist or is empty"
+ echo ".mygit/refs/heads/master does not exist or is empty"
  exit 1
  fi
  echo "Test 2 passed: git add and git commit succeeded"

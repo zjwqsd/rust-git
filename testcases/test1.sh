@@ -1,5 +1,6 @@
 #!/bin/bash
 # 当前目录位于 testcases
+rm -r test1
 mkdir test1
  # 拷贝 rust-git 到 test1 目录
 cp rust-git test1/

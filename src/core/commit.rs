@@ -2,6 +2,7 @@ use std::fs::{self};
 use std::io::{self};
 use std::path::{Path};
 use crate::core::{index::read_index, tree::create_tree};
+use crate::core::reference::read_head_commit_hash;
 use crate::utils::hash::sha1_hash;
 use std::collections::HashSet;
 pub fn create_commit(message: &str, repo_path: &Path) -> io::Result<String> {
@@ -18,21 +19,11 @@ pub fn create_commit(message: &str, repo_path: &Path) -> io::Result<String> {
     let head_content = fs::read_to_string(&head_path)?.trim().to_string();
     println!("📌 当前 HEAD 内容: {}", head_content);
     // 获取 parent commit（如果存在）
-    let parent = if head_content.starts_with("ref: ") {
-        let ref_path = repo_path.join(head_content.trim_start_matches("ref: ").trim());
-        if ref_path.exists() {
-            Some(fs::read_to_string(&ref_path)?.trim().to_string())
-        } else {
-            None
-        }
-    } else {
-        // detached HEAD 情况
-        if !head_content.is_empty() {
-            Some(head_content.clone())
-        } else {
-            None
-        }
+    let parent = match read_head_commit_hash(repo_path) {
+        Ok(commit) if !commit.is_empty() => Some(commit),
+        _ => None,
     };
+
 
     let author = "Your Name <you@example.com>";
     let content = format!(

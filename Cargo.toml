@@ -10,10 +10,6 @@ serde = { version = "1.0.219", features = ["derive"] }
 toml = "0.8.22"
 once_cell = "1.21.3"
 
-[core]
-git_dir = ".mygit"
-default_branch = "main"
-
 [dev-dependencies]
 assert_cmd = "2"
 tempfile = "3"

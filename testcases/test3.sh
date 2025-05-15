@@ -1,6 +1,6 @@
  # 当前目录位于 testcases
  # 创建一个空目录 test3
- mkdir test3
+mkdir test3
  # 拷贝 rust-git 到 test3 目录
 cp rust-git test3/
  # 进入 test3 目录

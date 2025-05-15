@@ -62,3 +62,16 @@ pub fn validate_branch_name(name: &str) -> Result<(), String> {
 
     Ok(())
 }
+
+/// 从 HEAD 读取当前指向的 commit hash，不论是否为分支
+pub fn read_head_commit_hash(repo_path: &Path) -> io::Result<String> {
+    let head_path = repo_path.join("HEAD");
+    let head_content = fs::read_to_string(&head_path)?.trim().to_string();
+
+    if head_content.starts_with("ref: ") {
+        let ref_path = repo_path.join(head_content.trim_start_matches("ref: ").trim());
+        fs::read_to_string(&ref_path).map(|s| s.trim().to_string())
+    } else {
+        Ok(head_content)
+    }
+}

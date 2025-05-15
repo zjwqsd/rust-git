@@ -122,32 +122,86 @@ pub fn load_blob(hash: &str, repo_path: &Path) -> io::Result<Vec<String>> {
 /// - 相同文件、相同 hash：保留
 /// - 相同文件、不同 hash：跳过（冲突）
 /// - 不同文件名：合并
+// pub fn merge_tree_simple(
+//     current: &HashMap<String, String>,
+//     target: &HashMap<String, String>,
+// ) -> HashMap<String, String> {
+//     let mut merged = HashMap::new();
+//
+//     for (path, hash) in target {
+//         match current.get(path) {
+//             Some(cur_hash) => {
+//                 if cur_hash == hash {
+//                     merged.insert(path.clone(), hash.clone()); // 内容一致，保留
+//                 } else {
+//                     merged.insert(path.clone(), hash.clone()); // 内容不同但无冲突，按目标分支覆盖
+//                 }
+//             }
+//             None => {
+//                 merged.insert(path.clone(), hash.clone()); // 新文件
+//             }
+//         }
+//     }
+//
+//     // 🔥 特别注意：不要自动保留 current 中目标已删除的文件
+//     // 即：如果 target 不包含某文件，则认为其被删除 → 不加入 merged
+//
+//     merged
+// }
 pub fn merge_tree_simple(
+    base: &HashMap<String, String>,
     current: &HashMap<String, String>,
     target: &HashMap<String, String>,
 ) -> HashMap<String, String> {
     let mut merged = HashMap::new();
+    let all_files: std::collections::HashSet<_> =
+        base.keys().chain(current.keys()).chain(target.keys()).collect();
 
-    for (path, hash) in target {
-        match current.get(path) {
-            Some(cur_hash) => {
-                if cur_hash == hash {
-                    merged.insert(path.clone(), hash.clone()); // 内容一致，保留
-                } else {
-                    merged.insert(path.clone(), hash.clone()); // 内容不同但无冲突，按目标分支覆盖
-                }
+    for file in all_files {
+        let base_entry = base.get(file);
+        let current_entry = current.get(file);
+        let target_entry = target.get(file);
+
+        match (base_entry, current_entry, target_entry) {
+            // 当前没改，目标删除 => 删除
+            (Some(base), Some(cur), None) if cur == base => {
+                // 不加入 merged，相当于删除
             }
-            None => {
-                merged.insert(path.clone(), hash.clone()); // 新文件
+
+            // 当前改了，目标删除 => 保留当前（前面已判断无冲突）
+            (Some(base), Some(cur), None) => {
+                merged.insert(file.clone(), cur.clone());
             }
+
+            // 目标改了，当前删除 => 保留目标
+            (Some(base), None, Some(tgt)) => {
+                merged.insert(file.clone(), tgt.clone());
+            }
+
+            // 文件只在 current 中（新增）
+            (None, Some(cur), None) => {
+                merged.insert(file.clone(), cur.clone());
+            }
+
+            // 文件只在 target 中（新增）
+            (None, None, Some(tgt)) => {
+                merged.insert(file.clone(), tgt.clone());
+            }
+
+            // 双方都有（内容一致或前面已判断无冲突）
+            (_, Some(_), Some(tgt)) => {
+                merged.insert(file.clone(), tgt.clone());
+            }
+
+            // 其他情况（如都删除），忽略
+            _ => {}
         }
     }
 
-    // 🔥 特别注意：不要自动保留 current 中目标已删除的文件
-    // 即：如果 target 不包含某文件，则认为其被删除 → 不加入 merged
-
     merged
 }
+
+
 
 /// 将 tree 的 HashMap 写入对象存储，返回 tree 哈希
 pub fn write_tree_from_map(

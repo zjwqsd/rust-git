@@ -47,7 +47,7 @@ fn test_merge_fast_forward() {
     bin().args(["branch", "dev"]).current_dir(repo).assert().success();
     bin().args(["checkout", "dev"]).current_dir(repo).assert().success();
     init_commit(repo, "b.txt", "v2");
-    bin().args(["checkout", "main"]).current_dir(repo).assert().success();
+    bin().args(["checkout", "master"]).current_dir(repo).assert().success();
     bin().args(["merge", "dev"]).current_dir(repo).assert().stdout(contains("已合并"));
 }
 
@@ -59,7 +59,7 @@ fn test_merge_up_to_date() {
     init_commit(repo, "x.txt", "x");
     // bin().args(["merge", "main"]).current_dir(repo).assert().stdout(contains("Already up to Date"));
 
-    let out = run_and_log(&["merge", "main"], repo);
+    let out = run_and_log(&["merge", "master"], repo);
     assert!(out.contains("Already up to Date"));
 }
 #[test]

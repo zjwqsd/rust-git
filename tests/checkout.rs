@@ -99,9 +99,9 @@ fn test_checkout_from_detached_to_branch() {
 
     let hash = get_current_commit_hash(repo);
     bin().args(["checkout", &hash]).current_dir(repo).assert().success();
-    bin().args(["checkout", "main"]).current_dir(repo).assert().success();
+    bin().args(["checkout", "master"]).current_dir(repo).assert().success();
 
-    assert_head_points_to(repo, "main");
+    assert_head_points_to(repo, "master");
 }
 
 #[test]

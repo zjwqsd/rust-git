@@ -54,9 +54,9 @@ fn test_branch_list_normal() {
     bin().args(["commit", "-m", "init"]).current_dir(repo).assert().success();
     bin().args(["branch", "dev"]).current_dir(repo).assert().success();
 
-    assert_branch_exists(repo, "main");
+    assert_branch_exists(repo, "master");
     assert_branch_exists(repo, "dev");
-    assert_head_points_to(repo, "main");
+    assert_head_points_to(repo, "master");
 }
 
 #[test]
@@ -178,10 +178,10 @@ fn test_commit_in_detached_head_does_not_change_branch() {
     let second_commit = get_current_commit_hash(repo);
     assert_ne!(first_commit, second_commit, "应生成新提交");
 
-    // 切回 main，看它是否还是指向 first commit（未被更新）
-    bin().args(["checkout", "main"]).current_dir(repo).assert().success();
+    // 切回 master，看它是否还是指向 first commit（未被更新）
+    bin().args(["checkout", "master"]).current_dir(repo).assert().success();
     let current = get_current_commit_hash(repo);
-    assert_eq!(current, first_commit, "main 分支不应指向 detached 中的新提交");
+    assert_eq!(current, first_commit, "master 分支不应指向 detached 中的新提交");
 }
 
 //detached HEAD 下切换其他分支，应正常重设 HEAD

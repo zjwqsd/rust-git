@@ -40,5 +40,5 @@ pub static DEFAULT_BRANCH: Lazy<String> = Lazy::new(|| {
         .as_ref()
         .and_then(|c| c.default_branch.as_ref())
         .cloned()
-        .unwrap_or_else(|| "main".to_string())
+        .unwrap_or_else(|| "master".to_string())
 });

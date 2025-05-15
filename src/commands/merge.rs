@@ -70,18 +70,18 @@ pub fn git_merge(target_branch: &str) {
         let cur = current_tree.get(file);
         let tgt = target_tree.get(file);
 
-        if base == cur || base == tgt {
-            continue; // 一边没改，自动合并
-        }
+        // if base == cur || base == tgt {
+        //     continue; // 一边没改，自动合并
+        // }
 
-        if cur != tgt {
-            // 双方都改了，检测具体行差异
+        if cur != tgt && base != cur && base != tgt {
             let cur_lines = cur
                 .and_then(|h| load_blob(h, repo_path).ok())
                 .unwrap_or_default();
             let tgt_lines = tgt
                 .and_then(|h| load_blob(h, repo_path).ok())
                 .unwrap_or_default();
+
             let max_lines = cur_lines.len().max(tgt_lines.len());
             let mut i = 0;
             while i < max_lines {
@@ -120,7 +120,9 @@ pub fn git_merge(target_branch: &str) {
     println!("存在分叉但无冲突");
 
     // 合并 tree（默认以目标为主）
-    let merged_tree = merge_tree_simple(&current_tree, &target_tree);
+    // let merged_tree = merge_tree_simple(&current_tree, &target_tree);
+    let merged_tree = merge_tree_simple(&base_tree, &current_tree, &target_tree);
+
     let new_tree_hash = write_tree_from_map(&merged_tree, repo_path).unwrap();
 
     let merge_commit_hash = create_merge_commit(
