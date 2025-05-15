@@ -1,8 +1,6 @@
 #!/bin/bash
- # 当前目录位于 testcases
- cd testcases
- # 创建一个空目录 test1
- mkdir test1
+# 当前目录位于 testcases
+mkdir test1
  # 拷贝 rust-git 到 test1 目录
 cp rust-git test1/
  # 进入 test1 目录
@@ -15,4 +13,4 @@ if [ -d ".mygit" ] && [ "$(ls -A .mygit)" ]; then
  else
  echo "Test 1 failed: .git directory does not exist or is empty"
  exit 1
- fi
+fi
