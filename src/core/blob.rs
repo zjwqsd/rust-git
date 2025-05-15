@@ -2,6 +2,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
 use crate::utils::hash::sha1_hash;
+use crate::core::config::GIT_DIR;
 /// 将指定路径的文件内容写入 Git 风格的对象存储中，并返回该内容的 SHA-1 哈希值。
 ///
 /// 该函数会执行以下步骤：
@@ -40,7 +41,7 @@ pub fn write_blob(path: &Path) -> io::Result<String> {
     let hash = sha1_hash(&content);
     let (dir, file) = hash.split_at(2);
 
-    let object_dir = Path::new(".mygit").join("objects").join(dir);
+    let object_dir = &*GIT_DIR.join("objects").join(dir);
     if !object_dir.exists() {
         fs::create_dir_all(&object_dir)?;
     }

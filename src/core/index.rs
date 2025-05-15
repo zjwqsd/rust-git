@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 use crate::core::blob::write_blob;
-
+use crate::core::config::{GIT_DIR};
 /// 将路径标准化为统一格式（相对路径 + / 分隔符）
 /// 将路径标准化为统一格式（相对路径 + / 分隔符）
 pub fn normalize_path(path: &Path) -> io::Result<String> {
@@ -52,7 +52,7 @@ fn add_dir_recursive(dir: &Path, index: &mut BTreeMap<String, String>, exe: &Opt
         let entry = entry?;
         let path = entry.path();
 
-        if path.is_dir() && path.file_name().map_or(false, |n| n == ".mygit") {
+        if path.is_dir() && path.file_name().map_or(false, |n| n == *GIT_DIR) {
             continue;
         }
 
@@ -71,18 +71,10 @@ fn add_dir_recursive(dir: &Path, index: &mut BTreeMap<String, String>, exe: &Opt
     Ok(())
 }
 
-// 添加单个文件
-// fn add_file_to_index(file_path: &Path, index_file: &mut fs::File) -> io::Result<()> {
-//     let hash = write_blob(file_path)?;
-//     let clean_path = normalize_path(file_path)?;
-//
-//     println!("📌 add_file_to_index: {} -> {}", file_path.display(), clean_path);
-//     writeln!(index_file, "{} {}", hash, clean_path)?;
-//     Ok(())
-// }
+
 // 公共接口：添加路径（文件或目录）到 index
 pub fn add_to_index(path: &Path) -> io::Result<()> {
-    let index_path = Path::new(".mygit").join("index");
+    let index_path = &*GIT_DIR.join("index");
     let mut index = load_index(&index_path);
 
     let exe = std::env::current_exe().ok();
@@ -102,30 +94,7 @@ pub fn add_to_index(path: &Path) -> io::Result<()> {
 
     save_index(&index_path, &index)
 }
-/// 遍历目录所有文件，递归实现
-// fn visit_dir_recursively(dir: &Path, index_file: &mut fs::File, current_exe: &Option<PathBuf>) -> io::Result<()> {
-//     for entry in fs::read_dir(dir)? {
-//         let entry = entry?;
-//         let path = entry.path();
-//
-//         if path.is_dir() && path.file_name().map_or(false, |n| n == ".mygit") {
-//             continue;
-//         }
-//
-//         if let Some(ref exe) = current_exe {
-//             if &path == exe {
-//                 continue;
-//             }
-//         }
-//
-//         if path.is_file() {
-//             add_file_to_index(&path, index_file)?;
-//         } else if path.is_dir() {
-//             visit_dir_recursively(&path, index_file, current_exe)?;
-//         }
-//     }
-//     Ok(())
-// }
+
 
 /// 读取 index 内容
 pub fn read_index(index_path: &Path) -> io::Result<Vec<(String, String)>> {
@@ -149,8 +118,7 @@ pub fn read_index(index_path: &Path) -> io::Result<Vec<(String, String)>> {
 pub fn remove_from_index(path: &Path) -> io::Result<Option<String>> {
     println!("🔥 remove_from_index 正在运行");
 
-    // let index_path = Path::new(".mygit/index");
-    let index_path = Path::new(".mygit").join("index");
+    let index_path = &*GIT_DIR.join("index");
 
     if !index_path.exists() {
         println!("❗ 警告：index 文件不存在！路径是：{}", index_path.display());
@@ -197,7 +165,7 @@ pub fn remove_from_index(path: &Path) -> io::Result<Option<String>> {
 }
 
 pub fn remove_directory_entries_from_index(dir_path: &Path) {
-    let index_path = Path::new(".mygit").join("index");
+    let index_path = &*GIT_DIR.join("index");
 
     if !index_path.exists() {
         println!("⚠️ index 文件不存在");

@@ -1,9 +1,9 @@
 use std::fs;
-use std::path::Path;
+// use std::path::Path;
 use crate::core::reference::{set_head,validate_branch_name};
 use crate::core::commit::read_commit_tree;
 use crate::core::tree::{restore_tree, clean_working_directory};
-
+use crate::core::config::{GIT_DIR};
 /// 判断是否是合法的 40 位 commit hash
 fn is_commit_hash(s: &str) -> bool {
     s.len() == 40 && s.chars().all(|c| c.is_ascii_hexdigit())
@@ -14,7 +14,7 @@ fn is_commit_hash(s: &str) -> bool {
 
 /// 主函数：执行 checkout 逻辑
 pub fn git_checkout(target: &str, create: bool) {
-    let repo_path = Path::new(".mygit");
+    let repo_path = &*GIT_DIR;
 
     // 🚫 拒绝直接使用 "ref: refs/..." 形式
     if target.starts_with("ref: ") {
@@ -96,7 +96,7 @@ pub fn git_checkout(target: &str, create: bool) {
         .to_string();
 
     if commit_hash.is_empty() {
-        println!("提示：当前分支尚无提交，工作区为空（仅保留 .mygit）");
+        println!("提示：当前分支尚无提交，工作区为空（仅保留 git 仓库）");
         return;
     }
 

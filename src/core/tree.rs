@@ -1,14 +1,14 @@
 use std::fs::{self};
 use std::io::{self};
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use crate::utils::hash::sha1_hash;
 use std::collections::HashMap;
+use crate::core::config::GIT_DIR;
 
-
-/// 安全清理工作区，只保留 `.mygit` 和执行文件本体
+/// 安全清理工作区，只保留 `Git 文件夹` 和执行文件本体
 pub fn clean_working_directory() -> io::Result<()> {
     let exe = std::env::current_exe().ok();
-    let mygit_path = fs::canonicalize(".mygit").unwrap_or_else(|_| PathBuf::from(".mygit"));
+    let mygit_path = fs::canonicalize(&*GIT_DIR).unwrap_or_else(|_| GIT_DIR.clone());
 
     for entry in fs::read_dir(".")? {
         let entry = entry?;
@@ -16,7 +16,7 @@ pub fn clean_working_directory() -> io::Result<()> {
         let canonical = fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
 
         if canonical.starts_with(&mygit_path) {
-            println!("🔒 跳过 .mygit 内部文件或目录: {}", path.display());
+            println!("🔒 跳过 Git 文件夹内部文件或目录: {}", path.display());
             continue;
         }
 
@@ -27,8 +27,8 @@ pub fn clean_working_directory() -> io::Result<()> {
             }
         }
         println!("检查路径: {}", path.display());
-        if path == Path::new(".mygit") {
-            println!("🚨 竟然试图删除 .mygit!!!");
+        if path == *GIT_DIR {
+            println!("🚨 警告: 竟然试图删除 Git 目录 {}!!!", GIT_DIR.display());
         }
         if path.is_file() {
             println!("🧹 删除文件: {}", path.display());

@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use crate::core::index::read_index;
 use crate::utils::hash::sha1_hash;
 use crate::core::tree::read_tree_entries;
-
+use crate::core::config::{GIT_DIR};
 /// 读取 HEAD 所在的 commit 的 tree（路径 -> blob hash 映射）
 fn read_head_tree_map(repo_path: &Path) -> io::Result<HashMap<String, String>> {
     let head_path = repo_path.join("HEAD");
@@ -38,7 +38,7 @@ fn read_head_tree_map(repo_path: &Path) -> io::Result<HashMap<String, String>> {
 }
 
 pub fn git_status() {
-    let repo_path = Path::new(".mygit");
+    let repo_path = &*GIT_DIR;
     let index_path = repo_path.join("index");
 
     // 读取 index
@@ -89,9 +89,18 @@ pub fn git_status() {
             .unwrap_or(&file)
             .to_string_lossy()
             .replace('\\', "/");
-        if rel.starts_with(".mygit") {
+
+        // 获取配置中设置的 git 目录名（例如 ".mygit"）
+        let git_dir_str = GIT_DIR
+            .file_name()
+            .and_then(|os_str| os_str.to_str())
+            .unwrap_or(".mygit");
+
+        // 忽略 git_dir 开头的路径
+        if rel.starts_with(git_dir_str) {
             continue;
         }
+
         if !seen.contains(&rel) {
             println!("untracked: {}", rel);
         }

@@ -6,9 +6,9 @@ use crate::core::reference::{get_head_ref, get_current_branch_name};
 use crate::core::tree::{
     read_tree_entries, load_blob, merge_tree_simple, write_tree_from_map, restore_tree,
 };
-
+use crate::core::config::{GIT_DIR};
 pub fn git_merge(target_branch: &str) {
-    let repo_path = Path::new(".mygit");
+    let repo_path = &*GIT_DIR;
 
     // 获取 HEAD 和当前分支
     let head_ref_path = match get_head_ref(repo_path) {
