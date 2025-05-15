@@ -8,3 +8,4 @@ rm -rf ad_test1
 rm -rf ad_test2
 rm -rf ad_test3
 rm large_file.bin
+rm rust-git
