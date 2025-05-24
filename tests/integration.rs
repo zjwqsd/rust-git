@@ -110,51 +110,51 @@ fn test_merge_no_conflict() {
     assert!(content.contains("v2"));
 }
 
-// #[test]
-// fn test_merge_conflict() {
-//     let tmp = tempdir().unwrap();
-//     let repo = tmp.path();
-//
-//     // 初始化仓库
-//     run_and_print(&["init"], repo);
-//     fs::write(repo.join("test.txt"), "line1\nline2\n").unwrap();
-//     run_and_print(&["add", "test.txt"], repo);
-//     run_and_print(&["commit", "-m", "initial"], repo);
-//
-//     // 创建 temp1 分支并修改
-//     run_and_print(&["branch", "temp1"], repo);
-//     run_and_print(&["checkout", "temp1"], repo);
-//     fs::write(repo.join("test.txt"), "line1\nchange-from-temp1\n").unwrap();
-//     run_and_print(&["add", "test.txt"], repo);
-//     run_and_print(&["commit", "-m", "temp1 edit"], repo);
-//
-//     // 回到 main，创建 temp2 并修改
-//     run_and_print(&["checkout", "main"], repo);
-//     run_and_print(&["branch", "temp2"], repo);
-//     run_and_print(&["checkout", "temp2"], repo);
-//     fs::write(repo.join("test.txt"), "line1\nchange-from-temp2\n").unwrap();
-//     run_and_print(&["add", "test.txt"], repo);
-//     run_and_print(&["commit", "-m", "temp2 edit"], repo);
-//
-//     // 合并 temp1，期望产生冲突
-//     let output = bin()
-//         .args(["merge", "temp1"])
-//         .current_dir(repo)
-//         .output()
-//         .expect("merge failed");
-//
-//     println!("\n🔧 $ rust-git merge temp1");
-//     println!("📤 stdout:\n{}", String::from_utf8_lossy(&output.stdout));
-//     println!("📥 stderr:\n{}", String::from_utf8_lossy(&output.stderr));
-//
-//     let stdout = String::from_utf8_lossy(&output.stdout);
-//     assert!(
-//         stdout.contains("Merge conflict in test.txt"),
-//         "冲突信息未输出"
-//     );
-//     assert!(
-//         stdout.contains("❗ 冲突发生"),
-//         "未提示手动解决冲突"
-//     );
-// }
+#[test]
+fn test_merge_conflict() {
+    let tmp = tempdir().unwrap();
+    let repo = tmp.path();
+
+    // 初始化仓库
+    run_and_print(&["init"], repo);
+    fs::write(repo.join("test.txt"), "line1\nline2\n").unwrap();
+    run_and_print(&["add", "test.txt"], repo);
+    run_and_print(&["commit", "-m", "initial"], repo);
+
+    // 创建 temp1 分支并修改
+    run_and_print(&["branch", "temp1"], repo);
+    run_and_print(&["checkout", "temp1"], repo);
+    fs::write(repo.join("test.txt"), "line1\nchange-from-temp1\n").unwrap();
+    run_and_print(&["add", "test.txt"], repo);
+    run_and_print(&["commit", "-m", "temp1 edit"], repo);
+
+    // 回到 main，创建 temp2 并修改
+    run_and_print(&["checkout", "master"], repo);
+    run_and_print(&["branch", "temp2"], repo);
+    run_and_print(&["checkout", "temp2"], repo);
+    fs::write(repo.join("test.txt"), "line1\nchange-from-temp2\n").unwrap();
+    run_and_print(&["add", "test.txt"], repo);
+    run_and_print(&["commit", "-m", "temp2 edit"], repo);
+
+    // 合并 temp1，期望产生冲突
+    let output = bin()
+        .args(["merge", "temp1"])
+        .current_dir(repo)
+        .output()
+        .expect("merge failed");
+
+    println!("\n🔧 $ rust-git merge temp1");
+    println!("📤 stdout:\n{}", String::from_utf8_lossy(&output.stdout));
+    println!("📥 stderr:\n{}", String::from_utf8_lossy(&output.stderr));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Merge conflict in test.txt"),
+        "冲突信息未输出"
+    );
+    assert!(
+        stdout.contains("❗ 冲突发生"),
+        "未提示手动解决冲突"
+    );
+}
 

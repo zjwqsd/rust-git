@@ -23,18 +23,18 @@ if [ -f "test.txt" ]; then
  ./rust-git add test.txt
  ./rust-git commit -m "Initial commit"
  
-  # 验证 .mygit/objects 目录是否不为空
-if [ "$(ls -A .mygit/objects)" ]; then
- echo ".mygit/objects directory is not empty"
+  # 验证 .git/objects 目录是否不为空
+if [ "$(ls -A .git/objects)" ]; then
+ echo ".git/objects directory is not empty"
  else
- echo ".mygit/objects directory is empty"
+ echo ".git/objects directory is empty"
  exit 1
  fi
- # 验证 .mygit/refs/heads/main 文件是否存在且不为空
-if [ -s ".mygit/refs/heads/master" ]; then
- echo ".mygit/refs/heads/master exists and is not empty"
+ # 验证 .git/refs/heads/main 文件是否存在且不为空
+if [ -s ".git/refs/heads/master" ]; then
+ echo ".git/refs/heads/master exists and is not empty"
  else
- echo ".mygit/refs/heads/master does not exist or is empty"
+ echo ".git/refs/heads/master does not exist or is empty"
  exit 1
  fi
  echo "Test 2 passed: git add and git commit succeeded"

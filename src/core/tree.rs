@@ -3,7 +3,7 @@ use std::io::{self};
 use std::path::{Path};
 use crate::utils::hash::sha1_hash;
 use std::collections::HashMap;
-use crate::core::config::GIT_DIR;
+use crate::core::config::{GIT_DIR, IS_VERBOSE};
 
 /// 安全清理工作区，只保留 `Git 文件夹` 和执行文件本体
 pub fn clean_working_directory() -> io::Result<()> {
@@ -16,25 +16,37 @@ pub fn clean_working_directory() -> io::Result<()> {
         let canonical = fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
 
         if canonical.starts_with(&mygit_path) {
-            println!("🔒 跳过 Git 文件夹内部文件或目录: {}", path.display());
+            if *IS_VERBOSE {
+                println!("🔒 跳过 Git 文件夹内部文件或目录: {}", path.display());
+            }
             continue;
         }
 
         if let Some(ref exe_path) = exe {
             if &canonical == exe_path {
-                println!("🔒 跳过当前可执行文件: {}", path.display());
+                if *IS_VERBOSE {
+                    println!("🔒 跳过当前可执行文件: {}", path.display());
+                }
                 continue;
             }
         }
-        println!("检查路径: {}", path.display());
+        if *IS_VERBOSE {
+            println!("检查路径: {}", path.display());
+        }
         if path == *GIT_DIR {
-            println!("🚨 警告: 竟然试图删除 Git 目录 {}!!!", GIT_DIR.display());
+            if *IS_VERBOSE {
+                println!("🚨 警告: 竟然试图删除 Git 目录 {}!!!", GIT_DIR.display());
+            }
         }
         if path.is_file() {
-            println!("🧹 删除文件: {}", path.display());
+            if *IS_VERBOSE {
+                println!("🧹 删除文件: {}", path.display());
+            }
             fs::remove_file(&path)?;
         } else if path.is_dir() {
-            println!("🧹 删除目录: {}", path.display());
+            if *IS_VERBOSE {
+                println!("🧹 删除目录: {}", path.display());
+            }
             fs::remove_dir_all(&path)?;
         }
     }
@@ -52,7 +64,9 @@ pub fn create_tree(entries: &[(String, String)], repo_path: &Path) -> io::Result
         if file_path.exists() {
             content.push_str(&format!("blob {} {}\n", hash, path));
         } else {
-            println!("⚠️  跳过不存在的文件 {}", path);
+            if *IS_VERBOSE {
+                println!("⚠️  跳过不存在的文件 {}", path);
+            }
         }
     }
 
@@ -61,8 +75,8 @@ pub fn create_tree(entries: &[(String, String)], repo_path: &Path) -> io::Result
     let obj_dir = repo_path.join("objects").join(dir);
     fs::create_dir_all(&obj_dir)?;
     let tree_path = obj_dir.join(file);
-    println!("🌲 最终写入 tree 对象内容：");
-    println!("{}", content);
+    // println!("🌲 最终写入 tree 对象内容：");
+    // println!("{}", content);
     fs::write(tree_path, content)?;
 
     Ok(tree_hash)
@@ -85,7 +99,9 @@ pub fn restore_tree(tree_hash: &str, repo_path: &Path) -> io::Result<()> {
 
                 // 💡 强制覆盖文件（即使文件存在）
                 fs::write(filename, blob_content)?;
-                println!("✔ 恢复文件 {} -> {}", filename, hash);
+                if *IS_VERBOSE {
+                    println!("✔ 恢复文件 {} -> {}", filename, hash);
+                }
             }
         }
     }
@@ -169,12 +185,12 @@ pub fn merge_tree_simple(
             }
 
             // 当前改了，目标删除 => 保留当前（前面已判断无冲突）
-            (Some(base), Some(cur), None) => {
+            (Some(_base), Some(cur), None) => {
                 merged.insert(file.clone(), cur.clone());
             }
 
             // 目标改了，当前删除 => 保留目标
-            (Some(base), None, Some(tgt)) => {
+            (Some(_base), None, Some(tgt)) => {
                 merged.insert(file.clone(), tgt.clone());
             }
 

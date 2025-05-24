@@ -6,7 +6,7 @@ use crate::core::reference::{get_head_ref, get_current_branch_name};
 use crate::core::tree::{
     read_tree_entries, load_blob, merge_tree_simple, write_tree_from_map, restore_tree,
 };
-use crate::core::config::{GIT_DIR};
+use crate::core::config::{GIT_DIR, IS_VERBOSE};
 pub fn git_merge(target_branch: &str) {
     let repo_path = &*GIT_DIR;
 
@@ -35,11 +35,15 @@ pub fn git_merge(target_branch: &str) {
     let target_commit = fs::read_to_string(&target_ref).unwrap().trim().to_string();
 
     if current_commit == target_commit {
-        println!("Already up to Date");
+        if *IS_VERBOSE {
+            println!("Already up to Date");
+        }
         return;
     }
     if current_commit.len() < 2 || target_commit.len() < 2 {
-        return eprintln!("当前或目标分支为空，无法合并");
+        if *IS_VERBOSE {
+            return eprintln!("当前或目标分支为空，无法合并");
+        }
     }
 
     // 读取三方 tree
@@ -113,12 +117,14 @@ pub fn git_merge(target_branch: &str) {
     }
 
     if conflict_found {
-        println!("❗ 冲突发生，请手动解决");
+        if *IS_VERBOSE {
+            println!("❗ 冲突发生，请手动解决");
+        }
         return;
     }
-
-    println!("存在分叉但无冲突");
-
+    if *IS_VERBOSE {
+        println!("存在分叉但无冲突");
+    }
     // 合并 tree（默认以目标为主）
     // let merged_tree = merge_tree_simple(&current_tree, &target_tree);
     let merged_tree = merge_tree_simple(&base_tree, &current_tree, &target_tree);
@@ -137,5 +143,7 @@ pub fn git_merge(target_branch: &str) {
     // 更新 HEAD
     fs::write(&head_ref_path, format!("{}\n", merge_commit_hash)).unwrap();
     restore_tree(&new_tree_hash, repo_path).unwrap();
-    println!("已合并分支 '{}'（创建合并提交）", target_branch);
+    if *IS_VERBOSE {
+        println!("已合并分支 '{}'（创建合并提交）", target_branch);
+    }
 }

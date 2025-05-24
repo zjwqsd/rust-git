@@ -3,7 +3,7 @@ use std::fs;
 use std::io::{self};
 // use std::path::Path;
 use crate::core::reference::{read_head_commit_hash, validate_branch_name};
-use crate::core::config::{GIT_DIR};
+use crate::core::config::{GIT_DIR,IS_VERBOSE};
 use crate::core::reference::{get_current_branch_name};
 pub fn git_branch(branch_name: Option<&str>) -> io::Result<()> {
     let repo_path = &*GIT_DIR; // 使用配置中的仓库路径
@@ -25,15 +25,18 @@ pub fn git_branch(branch_name: Option<&str>) -> io::Result<()> {
 
         let new_branch = heads_dir.join(name);
         fs::write(new_branch, format!("{}\n", current_commit))?;
-
-        println!("✅ 已创建分支 '{}'，基于提交 {}", name, current_commit);
+        if *IS_VERBOSE {
+            println!("✅ 已创建分支 '{}'，基于提交 {}", name, current_commit);
+        }
     } else {
         // 列出所有分支
         let entries = fs::read_dir(&heads_dir)?;
         for entry in entries {
             let path = entry?.path();
             if let Some(name) = path.file_name() {
-                println!("{}", name.to_string_lossy());
+                if *IS_VERBOSE {
+                    println!("{}", name.to_string_lossy());
+                }
             }
         }
     }
@@ -58,7 +61,7 @@ pub fn git_branch_delete(branch_name: &str) {
 
     if branch_path.exists() {
         match fs::remove_file(&branch_path) {
-            Ok(_) => println!("✅ 已删除分支 '{}'", branch_name),
+            Ok(_) => {if *IS_VERBOSE {println!("✅ 已删除分支 '{}'", branch_name)}},
             Err(e) => eprintln!("删除失败: {}", e),
         }
     } else {

@@ -9,7 +9,7 @@ cd test1
  # 执行 rust-git init
  ./rust-git init
  # 验证 .git 目录是否存在且不为空
-if [ -d ".mygit" ] && [ "$(ls -A .mygit)" ]; then
+if [ -d ".git" ] && [ "$(ls -A .git)" ]; then
  echo "Test 1 passed: .git directory exists and is not empty"
  else
  echo "Test 1 failed: .git directory does not exist or is empty"

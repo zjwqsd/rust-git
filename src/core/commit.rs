@@ -5,19 +5,21 @@ use crate::core::{index::read_index, tree::create_tree};
 use crate::core::reference::read_head_commit_hash;
 use crate::utils::hash::sha1_hash;
 use std::collections::HashSet;
+use crate::core::config::IS_VERBOSE;
+
 pub fn create_commit(message: &str, repo_path: &Path) -> io::Result<String> {
     let entries = read_index(&repo_path.join("index"))?;
-    println!("📦 准备生成 tree，当前 index 中的条目:");
-    for (hash, path) in &entries {
-        println!("    {} {}", hash, path);
-    }
+    // println!("📦 准备生成 tree，当前 index 中的条目:");
+    // for (hash, path) in &entries {
+    //     println!("    {} {}", hash, path);
+    // }
 
     let tree_hash = create_tree(&entries, repo_path)?;
 
     // 获取 HEAD 内容（可能是 symbolic ref，也可能是 commit hash）
     let head_path = repo_path.join("HEAD");
     let head_content = fs::read_to_string(&head_path)?.trim().to_string();
-    println!("📌 当前 HEAD 内容: {}", head_content);
+    // println!("📌 当前 HEAD 内容: {}", head_content);
     // 获取 parent commit（如果存在）
     let parent = match read_head_commit_hash(repo_path) {
         Ok(commit) if !commit.is_empty() => Some(commit),
@@ -45,11 +47,15 @@ pub fn create_commit(message: &str, repo_path: &Path) -> io::Result<String> {
     // 更新 HEAD 或分支引用
     if head_content.starts_with("ref: ") {
         let ref_path = repo_path.join(head_content.trim_start_matches("ref: ").trim());
-        println!("🔗 更新分支 {} -> {}", ref_path.display(), hash);
+        if *IS_VERBOSE {
+            println!("🔗 更新分支 {} -> {}", ref_path.display(), hash);
+        }
         fs::write(ref_path, format!("{}\n", hash))?;
     } else {
         // detached HEAD
-        println!("🔗 更新 HEAD -> {}", hash);
+        if *IS_VERBOSE {
+            println!("🔗 更新 HEAD -> {}", hash);
+        }
         fs::write(head_path, format!("{}\n", hash))?;
     }
 

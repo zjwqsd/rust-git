@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 use crate::core::blob::write_blob;
-use crate::core::config::{GIT_DIR};
+use crate::core::config::{GIT_DIR, IS_VERBOSE};
 /// 将路径标准化为统一格式（相对路径 + / 分隔符）
 /// 将路径标准化为统一格式（相对路径 + / 分隔符）
 pub fn normalize_path(path: &Path) -> io::Result<String> {
@@ -42,7 +42,9 @@ fn add_single_file(path: &Path, index: &mut BTreeMap<String, String>) -> io::Res
     let hash = write_blob(path)?;
     let rel_path = normalize_path(path)?;
     index.insert(rel_path.clone(), hash.clone());
-    println!("✅ 添加到 index: {} -> {}", rel_path, hash);
+    if *IS_VERBOSE {
+        println!("✅ 添加到 index: {} -> {}", rel_path, hash);
+    }
     Ok(())
 }
 
@@ -107,45 +109,51 @@ pub fn read_index(index_path: &Path) -> io::Result<Vec<(String, String)>> {
         }
     }
 
-    for (hash, path) in &entries {
-        println!("📥 index 读取: {} -> {}", hash, path);
-    }
+    // for (hash, path) in &entries {
+    //     println!("📥 index 读取: {} -> {}", hash, path);
+    // }
 
     Ok(entries)
 }
 
 /// 从 index 中删除文件记录
 pub fn remove_from_index(path: &Path) -> io::Result<Option<String>> {
-    println!("🔥 remove_from_index 正在运行");
+    // println!("🔥 remove_from_index 正在运行");
 
     let index_path = &*GIT_DIR.join("index");
 
     if !index_path.exists() {
-        println!("❗ 警告：index 文件不存在！路径是：{}", index_path.display());
+        if *IS_VERBOSE {
+            println!("❗ 警告：index 文件不存在！路径是：{}", index_path.display());
+        }
         return Ok(None);
     }
 
     let content = fs::read_to_string(&index_path)?;
-    println!("📄 index 原始内容:\n{}", content);
+    // println!("📄 index 原始内容:\n{}", content);
 
     let mut new_lines = Vec::new();
     let mut removed_hash = None;
 
     let target_path = normalize_path(path)?;
-    println!("🎯 标准化目标路径: {}", target_path);
+    // println!("🎯 标准化目标路径: {}", target_path);
 
     for line in content.lines() {
         if let Some((hash, entry_path)) = line.split_once(' ') {
             if entry_path == target_path {
-                println!("✅ 从 index 中移除: {}", entry_path);
+                if *IS_VERBOSE {
+                    println!("✅ 从 index 中移除: {}", entry_path);
+                }
                 removed_hash = Some(hash.to_string());
                 continue;
             } else {
-                println!("❌ 匹配失败:");
-                println!("   entry_path     = {:?}", entry_path);
-                println!("   target_path    = {:?}", target_path);
-                println!("   entry_path.bytes(): {:?}", entry_path.as_bytes());
-                println!("   target_path.bytes(): {:?}", target_path.as_bytes());
+                if *IS_VERBOSE {
+                    println!("❌ 匹配失败:");
+                    println!("   entry_path     = {:?}", entry_path);
+                    println!("   target_path    = {:?}", target_path);
+                    println!("   entry_path.bytes(): {:?}", entry_path.as_bytes());
+                    println!("   target_path.bytes(): {:?}", target_path.as_bytes());
+                }
             }
         }
         new_lines.push(line.to_string());
@@ -153,12 +161,14 @@ pub fn remove_from_index(path: &Path) -> io::Result<Option<String>> {
     if let Some(parent) = index_path.parent() {
         fs::create_dir_all(parent)?;
     }
-    println!("📄 最终写入 index 内容:\n{}", new_lines.join("\n"));
+    // println!("📄 最终写入 index 内容:\n{}", new_lines.join("\n"));
 
     fs::write(&index_path, new_lines.join("\n"))?;
 
     if removed_hash.is_none() {
-        println!("⚠️ 未能匹配并移除 index 条目: {}", target_path);
+        if *IS_VERBOSE {
+            println!("⚠️ 未能匹配并移除 index 条目: {}", target_path);
+        }
     }
 
     Ok(removed_hash)
@@ -168,7 +178,9 @@ pub fn remove_directory_entries_from_index(dir_path: &Path) {
     let index_path = &*GIT_DIR.join("index");
 
     if !index_path.exists() {
-        println!("⚠️ index 文件不存在");
+        if *IS_VERBOSE {
+            println!("⚠️ index 文件不存在");
+        }
         return;
     }
 
@@ -181,7 +193,9 @@ pub fn remove_directory_entries_from_index(dir_path: &Path) {
             if !entry_path.starts_with(&target_dir) {
                 new_lines.push(line.to_string());
             } else {
-                println!("🗑️ 从 index 移除目录项: {}", entry_path);
+                if *IS_VERBOSE {
+                    println!("🗑️ 从 index 移除目录项: {}", entry_path);
+                }
             }
         }
     }

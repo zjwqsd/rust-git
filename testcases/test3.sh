@@ -16,18 +16,18 @@ echo "Hello, Rust!" > test.txt
  ./rust-git branch test
  # 执行 git checkout test
  ./rust-git checkout test
- # 验证 .mygit/refs/heads/test 文件是否存在
-if [ -f ".mygit/refs/heads/test" ]; then
- echo ".mygit/refs/heads/test exists"
+ # 验证 .git/refs/heads/test 文件是否存在
+if [ -f ".git/refs/heads/test" ]; then
+ echo ".git/refs/heads/test exists"
  else
- echo ".mygit/refs/heads/test does not exist"
+ echo ".git/refs/heads/test does not exist"
  exit 1
  fi
- # 验证 .mygit/HEAD 文件是否指向 refs/heads/test
- if grep -q "ref: refs/heads/test" ".mygit/HEAD"; then
- echo ".mygit/HEAD points to refs/heads/test"
+ # 验证 .git/HEAD 文件是否指向 refs/heads/test
+ if grep -q "ref: refs/heads/test" ".git/HEAD"; then
+ echo ".git/HEAD points to refs/heads/test"
  else
- echo ".mygit/HEAD does not point to refs/heads/test"
+ echo ".git/HEAD does not point to refs/heads/test"
  exit 1
  fi
  echo "Test 3 passed: git branch and git checkout succeeded"

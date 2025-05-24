@@ -35,7 +35,7 @@ echo "temp2分支修改内容" > test.txt
  ./rust-git commit -m "temp2"
  # 合并 test 分支并检查是否提示冲突
 if ./rust-git merge temp1 2>&1 | grep -q "Merge conflict in test.txt: 1"; then
- echo "Conflict detected correctly"
+ echo "Advanced Test 2 passed: Conflict detected correctly"
  else
  echo "Conflict not detected"
  exit 1

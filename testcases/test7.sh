@@ -20,17 +20,17 @@ cd ad_test2
   ./rust-git add large_file.bin
 
    # 提交 large_file.bin
-#   commit_hash=$(./rust-git commit -m "Add large file" 2>&1)
-  commit_output=$(./rust-git commit -m "Add large file" 2>&1)
-  commit_hash=$(echo "$commit_output" | grep -oE '[0-9a-f]{40}' | head -n1)
+   commit_hash=$(./rust-git commit -m "Add large file" 2>&1)
+#  commit_output=$(./rust-git commit -m "Add large file" 2>&1)
+#  commit_hash=$(echo "$commit_output" | grep -oE '[0-9a-f]{40}' | head -n1)
    # 检查提交是否成功
   if [ -z "$commit_hash" ]; then
    echo "Commit hash not found"
    exit 1
    fi
    echo "Committed changes: $commit_hash"
-   # 检查 .mygit/objects 目录下是否存在对应的对象文件
-   object_dir=".mygit/objects/${commit_hash:0:2}"
+   # 检查 .git/objects 目录下是否存在对应的对象文件
+   object_dir=".git/objects/${commit_hash:0:2}"
     object_file="$object_dir/${commit_hash:2}"
     if [ -d "$object_dir" ] && [ -f "$object_file" ]; then
     echo "Object file $object_file exists"

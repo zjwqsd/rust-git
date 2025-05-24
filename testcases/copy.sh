@@ -1,1 +1,1 @@
-cp ../target/debug/rust-git .
+cp ../target/release/rust-git .

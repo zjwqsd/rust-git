@@ -3,4 +3,6 @@ target
 # Rust 特有
 Cargo.lock
 **/rust-git
+submit
+submit.sh
 

@@ -42,11 +42,11 @@ else
     exit 1
 fi
 
- # 检查 .mygit/refs/heads 目录下是否只存在 main 分支的引用文件
-if [ -f ".mygit/refs/heads/main" ] && [ ! -f ".mygit/refs/heads/temp" ]; then
-  echo "Only main branch reference exists in .mygit/refs/heads"
+ # 检查 .git/refs/heads 目录下是否只存在 main 分支的引用文件
+if [ -f ".git/refs/heads/main" ] && [ ! -f ".git/refs/heads/temp" ]; then
+  echo "Only main branch reference exists in .git/refs/heads"
 else
-  echo "Branch references other than main exist in .mygit/refs/heads"
+  echo "Branch references other than main exist in .git/refs/heads"
   exit 1
 fi
 
